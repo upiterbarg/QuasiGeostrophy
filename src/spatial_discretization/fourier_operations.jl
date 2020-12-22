@@ -37,6 +37,10 @@ function +(p::FourierOperator, q::FourierOperator)
     return FourierOperator(p.op .+ q.op)
 end
 
+function *(p::FourierOperator, q::FourierOperator)
+    return FourierOperator(p.op .* q.op)
+end
+
 function +(p::FourierOperator, q::Number)
     return FourierOperator(p.op .+ q)
 end
@@ -70,6 +74,13 @@ function +(p::FourierOperator{𝒮, 𝒯}, q::FourierOperator{𝒮, 𝒯}) where
     return FourierOperator(p.op .+ q.op, fomd)
 end
 
+function *(p::FourierOperator{𝒮, 𝒯}, q::FourierOperator{𝒮, 𝒯}) where
+    {𝒮, 𝒯 <: FourierOperatorMetaData}
+    name = "(" * p.metadata.name * "*" * q.metadata.name * ")"
+    fomd = FourierOperatorMetaData(name)
+    return FourierOperator(p.op .* q.op, fomd)
+end
+
 function +(p::FourierOperator{𝒮, 𝒯}, q::Number) where
     {𝒮, 𝒯 <: FourierOperatorMetaData}
     name = "(" * p.metadata.name * "+" * string(q) * ")"
@@ -99,13 +110,9 @@ the it returns zero by defualt
 """
 function inv(a::FourierOperator)
     inv_op = 1 ./ a.op 
-    @inbounds for i in eachindex(inv_op)
-        if abs(inv_op[i]) == Inf
-            inv_op[i] = 0.0
-        elseif isnan(norm(inv_op[i]))
-            inv_op[i] = 0.0
-        end
-    end
+    mask1 = abs.(inv_op) .!= Inf
+    mask2 = .!(isnan.(norm.(inv_op)))
+    inv_op = mask1 .* mask2 .* inv_op # false * nan or false * inf is false
     return FourierOperator(inv_op)
 end
 
@@ -114,13 +121,9 @@ function inv(a::FourierOperator{𝒮, 𝒯}) where
     name = a.metadata.name * "⁻¹"
     fomd = FourierOperatorMetaData(name)
     inv_op = 1 ./ a.op 
-    @inbounds for i in eachindex(inv_op)
-        if abs(inv_op[i]) == Inf
-            inv_op[i] = 0.0
-        elseif isnan(norm(inv_op[i]))
-            inv_op[i] = 0.0
-        end
-    end
+    mask1 = abs.(inv_op) .!= Inf
+    mask2 = .!(isnan.(norm.(inv_op)))
+    inv_op = mask1 .* mask2 .* inv_op # false * nan or false * inf is false
     return FourierOperator(inv_op, fomd)
 end
 

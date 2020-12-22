@@ -7,7 +7,7 @@ include(pwd() * "/test/test_utils.jl")
 const tol = 1e1
 
 ## Define 1D Test
-Ω = S¹(0, 2π) 
+Ω = S¹(0, 2π)
 Nx = 2^9; 
 fourier_grid = FourierGrid(Nx, Ω)
 fieldnames = ("u", "σ", "v")
@@ -15,12 +15,13 @@ u, σ, v = create_fields(names = fieldnames, grid = fourier_grid)
 ∂x = create_operators(fourier_grid)
 # initialize FourierField data
 x = fourier_grid.grid[1]
-u(sin.(x) .+ 1); σ(cos.(x));
+u(sin.(x) .+ 1.0); σ(cos.(x));
 v( sin.(x));
 starting_energy = (u*u).data[1]
 # Wrap Around Impero Objects
 @wrapper u=u v=v σ=σ
 Δ  = Operator(∂x^2)
+Δ²  = Operator(∂x^4)
 ∂x = Operator(∂x)
 κ = 10.0/Nx
 
@@ -28,7 +29,7 @@ starting_energy = (u*u).data[1]
 ∂t = Operator(nothing, OperatorMetaData(nothing, "∂t"))
 
 @pde_system pde_system = [
-    ∂t(u) = -∂x(u^2) + κ*Δ(u),
+    ∂t(u) = -∂x(u^2) + κ*Δ(u) - 1e-6*Δ²(u),
 ]
 
 pde_plot = plot(pde_system[1]);
@@ -54,13 +55,13 @@ function evolve_pde(pde_system, Δt, ::RK2)
 end
 
 const Δt = 0.1 / Nx  
-T = 1
+T = 3
 steps = round(Int, T / Δt) 
 plotsteps = round(Int, steps / 10)
 for i in 1:steps
     evolve_pde(pde_system, Δt, RK2())
     if i%plotsteps==0
-        p1 = plot(u.data, ylims = (0,2))
+        p1 = plot(u.data, ylims = (-2,2))
         display(p1)
         sleep(0.01)
     end
